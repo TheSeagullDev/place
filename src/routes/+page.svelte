@@ -77,6 +77,35 @@
 		previousY = localY;
 	};
 
+	const updateZooming = (e) => {
+		const oldScale = viewportTransform.scale;
+		const oldX = viewportTransform.x;
+		const oldY = viewportTransform.y;
+
+		const localX = e.clientX;
+		const localY = e.clientY;
+
+		const previousScale = viewportTransform.scale;
+
+		const newScale = (viewportTransform.scale += e.deltaY * -0.01);
+		
+		const newX = localX - (localX - oldX) * (newScale / previousScale);
+		const newY = localY - (localY - oldY) * (newScale / previousScale);
+
+		viewportTransform.x = newX;
+		viewportTransform.y = newY;
+		viewportTransform.scale = newScale;
+		console.log(viewportTransform.scale)
+	}
+
+	const onMouseWheel = (e) => {
+		updateZooming(e);
+
+		render();
+
+		console.log(e);
+	}
+
 	const onMouseMove = (e) => {
 		updatePanning(e);
 		render();
@@ -128,6 +157,7 @@
 		}
 	}}
 	onmouseup={() => (panning = false)}
+	onwheel={(e) => onMouseWheel(e)}
 	width={size}
 	height={size}
 ></canvas>
