@@ -25,21 +25,77 @@
 	const app = initializeApp(firebaseConfig);
 	const db = getFirestore(app);
 
-	let size = 100;
+	let size = 500;
 	let regenerate = false;
-	let canvasElement;
+	let canvasElement = $state();
 	let ctx;
 
 	onMount(() => {
 		ctx = canvasElement.getContext('2d');
-	})
+		render();
+	});
+
+	const viewportTransform = {
+		x: 0,
+		y: 0,
+		scale: 1
+	};
+
+	const drawRect = (x, y, width, height, color) => {
+		ctx.fillStyle = color;
+		ctx.fillRect(x, y, width, height);
+	};
+
+	const render = () => {
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+		ctx.setTransform(
+			viewportTransform.scale,
+			0,
+			0,
+			viewportTransform.scale,
+			viewportTransform.x,
+			viewportTransform.y
+		);
+
+		drawRect(0, 0, 100, 100, 'red');
+		drawRect(200, 200, 100, 100, 'blue');
+	};
+
+	let panning = false;
+	let previousX = 0,
+		previousY = 0;
+
+	const updatePanning = (e) => {
+		const localX = e.clientX;
+		const localY = e.clientY;
+
+		viewportTransform.x += localX - previousX;
+		viewportTransform.y += localY - previousY;
+
+		previousX = localX;
+		previousY = localY;
+	};
+
+	const onMouseMove = (e) => {
+		updatePanning(e);
+		render();
+		console.log(e);
+	};
 
 	function getIndicesForCoord(x, y, width) {
 		const r = y * (width * 4) + x * 4;
 		return [r, r + 1, r + 2, r + 3];
 	}
 
-	console.log(pixels);
+	const pick = (event) => {
+		const bounding = canvasElement.getBoundingClientRect();
+		let x = event.clientX - bounding.left;
+		let y = event.clientY - bounding.top;
+		x = Math.floor(x / scaleBy);
+		y = Math.floor(y / scaleBy);
+		return [x, y];
+	};
 
 	let value = $state();
 	let input;
@@ -51,10 +107,27 @@
 			timestamp: Date.now()
 		});
 	}
-
 </script>
 
 <h1>Hello world!</h1>
 <form onsubmit={sendData}><input type="text" bind:value bind:this={input} /></form>
 
-<canvas bind:this={canvasElement}></canvas>
+<canvas
+	bind:this={canvasElement}
+	class="h-auto border"
+	style="image-rendering: pixelated;"
+	onmousedown={(e) => {
+		previousX = e.clientX;
+		previousY = e.clientY;
+
+		panning = true;
+	}}
+	onmousemove={(e) => {
+		if (panning) {
+			onMouseMove(e);
+		}
+	}}
+	onmouseup={() => (panning = false)}
+	width={size}
+	height={size}
+></canvas>
