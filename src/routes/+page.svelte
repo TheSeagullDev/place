@@ -39,20 +39,6 @@
 		return [r, r + 1, r + 2, r + 3];
 	}
 
-
-	/* for (let i = 0; i < size; i++) {
-		pixels.push(new Array(size));
-	}
-
-	for (let i = 0; i < pixels.length; i++) {
-		for (let j = 0; j < pixels[i].length; j++) {
-			pixels[i][j] = "FFFFFF";
-		}
-		if(regenerate) {
-			sendData(i);
-		}
-	} */
-
 	console.log(pixels);
 
 	let value = $state();
@@ -66,14 +52,6 @@
 		});
 	}
 
-/* 	const q = query(collection(db, 'data'));
-	onSnapshot(q, (snaps) => {
-		console.log(snaps);
-		snaps.forEach((doc) => {
-			const rowData = doc.data().rowData;
-			pixels[doc.data().row] = rowData;
-		});
-	}); */
 </script>
 
 <h1>Hello world!</h1>
