@@ -25,10 +25,11 @@
 	const app = initializeApp(firebaseConfig);
 	const db = getFirestore(app);
 
-	let size = 500;
+	let size = 1000;
 	let regenerate = false;
 	let canvasElement = $state();
 	let ctx;
+	let imageData;
 
 	onMount(() => {
 		ctx = canvasElement.getContext('2d');
@@ -46,6 +47,21 @@
 		ctx.fillRect(x, y, width, height);
 	};
 
+	const drawPixel = (x, y, color) => {
+		ctx.fillStyle = color;
+		ctx.fillRect(x, y, 1, 1);
+	};
+
+	const paintScreen = (imageData) => {
+		for(let row = 0; row < size; row++) {
+			for(let col = 0; col < size; col++) {
+				const indices = getIndicesForCoord(row, col, size);
+				const color = `rgb(${indices[0]} ${indices[1]} ${indices[2]}`;
+				drawPixel(row, col, color);
+			}
+		} 
+	}
+
 	const render = () => {
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
@@ -60,6 +76,9 @@
 
 		drawRect(0, 0, 100, 100, 'red');
 		drawRect(200, 200, 100, 100, 'blue');
+		const imageData = ctx.getImageData(0, 0, size, size);
+		ctx.putImageData(imageData, 0, 0);
+
 	};
 
 	let panning = false;
@@ -88,15 +107,21 @@
 		const previousScale = viewportTransform.scale;
 
 		const newScale = (viewportTransform.scale += e.deltaY * -0.01);
-		
+
 		const newX = localX - (localX - oldX) * (newScale / previousScale);
 		const newY = localY - (localY - oldY) * (newScale / previousScale);
 
 		viewportTransform.x = newX;
 		viewportTransform.y = newY;
 		viewportTransform.scale = newScale;
-		console.log(viewportTransform.scale)
-	}
+		if (viewportTransform.scale < 1) {
+			viewportTransform.x = oldX;
+			viewportTransform.y = oldY;
+			viewportTransform.scale = 1;
+		}
+
+		console.log(viewportTransform.scale);
+	};
 
 	const onMouseWheel = (e) => {
 		updateZooming(e);
@@ -104,7 +129,7 @@
 		render();
 
 		console.log(e);
-	}
+	};
 
 	const onMouseMove = (e) => {
 		updatePanning(e);
@@ -126,9 +151,6 @@
 		return [x, y];
 	};
 
-	let value = $state();
-	let input;
-
 	async function sendData(y) {
 		setDoc(doc(db, 'data', `row${y}`), {
 			row: y,
@@ -138,12 +160,19 @@
 	}
 </script>
 
-<h1>Hello world!</h1>
-<form onsubmit={sendData}><input type="text" bind:value bind:this={input} /></form>
+<button
+	class="fixed"
+	onclick={() => {
+		viewportTransform.x = 0;
+		viewportTransform.y = 0;
+		viewportTransform.scale = 1;
+		render();
+	}}>Reset view</button
+>
 
 <canvas
 	bind:this={canvasElement}
-	class="h-auto border"
+	class="m-auto h-screen border"
 	style="image-rendering: pixelated;"
 	onmousedown={(e) => {
 		previousX = e.clientX;
