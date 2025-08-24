@@ -35,19 +35,19 @@
 
 	let count = 0;
 
-	for(let row = 0; row < size; row++) {
-			for(let col = 0; col < size; col++) {
-				for(let i = 0; i < 3; i++) {
-					const index = row * (size * 4) + col * 4 + i;
-					randomArr[index] = (Math.floor(Math.random() * 255)); 
-				}
-				randomArr[row * (size * 4) + col * 4 + 3] = 255;
-				count++;
+	for (let row = 0; row < size; row++) {
+		for (let col = 0; col < size; col++) {
+			for (let i = 0; i < 3; i++) {
+				const index = row * (size * 4) + col * 4 + i;
+				randomArr[index] = Math.floor(Math.random() * 255);
 			}
-			if(count > 999900) {
-				console.log("almost done!");
-			}
+			randomArr[row * (size * 4) + col * 4 + 3] = 255;
+			count++;
 		}
+		if (count > 999900) {
+			console.log('almost done!');
+		}
+	}
 	console.log(count);
 
 	onMount(() => {
@@ -59,6 +59,8 @@
 	const viewportTransform = {
 		x: 0,
 		y: 0,
+		scaledX: 0,
+		scaledY: 0,
 		scale: 1
 	};
 
@@ -73,16 +75,18 @@
 	};
 
 	const paintScreen = () => {
-		for(let row = 0; row < size; row++) {
-			for(let col = 0; col < size; col++) {
+		for (let row = 0; row < size; row++) {
+			for (let col = 0; col < size; col++) {
 				drawPixel(row, col, randomArr[row][col]);
 			}
-		} 
-	}
+		}
+	};
 
 	const render = () => {
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+
 		ctx.setTransform(
 			viewportTransform.scale,
 			0,
@@ -95,12 +99,12 @@
 		const imageData = new ImageData(randomArr, size, size);
 		let imageBitmap;
 
-		createImageBitmap(imageData).then(bitmap => {
+		createImageBitmap(imageData).then((bitmap) => {
 			imageBitmap = bitmap;
-			console.log(imageBitmap);
 			ctx.drawImage(imageBitmap, 0, 0);
 		});
 
+		console.log(`scale: ${viewportTransform.scale} x: ${viewportTransform.x} y: ${viewportTransform.y} scaled x ${viewportTransform.x / (viewportTransform.scale - 1)}`);
 	};
 
 	let panning = false;
@@ -112,23 +116,38 @@
 		const localY = e.clientY;
 
 		viewportTransform.x += localX - previousX;
+		viewportTransform.scaledX = viewportTransform.x / (viewportTransform.scale - 1);
+		if(viewportTransform.scaledX < -1000) {
+			viewportTransform.x = -1000 * (viewportTransform.scale - 1);
+		}
+		else if(viewportTransform.x > 0) {
+			viewportTransform.x = 0;
+		}
 		viewportTransform.y += localY - previousY;
+		viewportTransform.scaledY = viewportTransform.y / (viewportTransform.scale - 1);
+		if(viewportTransform.scaledY < -1000) {
+			viewportTransform.y = -1000 * (viewportTransform.scale - 1);
+		}
+		else if(viewportTransform.y > 0) {
+			viewportTransform.y = 0;
+		}
 
 		previousX = localX;
 		previousY = localY;
 	};
 
 	const updateZooming = (e) => {
+		const bounding = canvasElement.getBoundingClientRect();
 		const oldScale = viewportTransform.scale;
 		const oldX = viewportTransform.x;
 		const oldY = viewportTransform.y;
 
-		const localX = e.clientX;
-		const localY = e.clientY;
+		const localX = e.clientX - bounding.left;
+		const localY = e.clientY - bounding.top;
 
 		const previousScale = viewportTransform.scale;
 
-		const newScale = (viewportTransform.scale += e.deltaY * -0.002);
+		const newScale = (viewportTransform.scale += e.deltaY * -0.01);
 
 		const newX = localX - (localX - oldX) * (newScale / previousScale);
 		const newY = localY - (localY - oldY) * (newScale / previousScale);
@@ -142,21 +161,33 @@
 			viewportTransform.scale = 1;
 		}
 
-		console.log(viewportTransform.scale);
+		viewportTransform.scaledX = viewportTransform.x / (viewportTransform.scale - 1);
+		if(viewportTransform.scaledX < -1000) {
+			viewportTransform.x = -1000 * (viewportTransform.scale - 1);
+		}
+		else if(viewportTransform.x > 0) {
+			viewportTransform.x = 0;
+		}
+		viewportTransform.y += localY - previousY;
+		viewportTransform.scaledY = viewportTransform.y / (viewportTransform.scale - 1);
+		if(viewportTransform.scaledY < -1000) {
+			viewportTransform.y = -1000 * (viewportTransform.scale - 1);
+		}
+		else if(viewportTransform.y > 0) {
+			viewportTransform.y = 0;
+		}
+		
 	};
 
 	const onMouseWheel = (e) => {
 		updateZooming(e);
 
 		render();
-
-		console.log(e);
 	};
 
 	const onMouseMove = (e) => {
 		updatePanning(e);
 		render();
-		console.log(e);
 	};
 
 	function getIndicesForCoord(x, y, width) {
@@ -192,23 +223,25 @@
 	}}>Reset view</button
 >
 
-<canvas
-	bind:this={canvasElement}
-	class="m-auto h-screen border"
-	style="image-rendering: pixelated;"
-	onmousedown={(e) => {
-		previousX = e.clientX;
-		previousY = e.clientY;
-
-		panning = true;
-	}}
-	onmousemove={(e) => {
-		if (panning) {
-			onMouseMove(e);
-		}
-	}}
-	onmouseup={() => (panning = false)}
-	onwheel={(e) => onMouseWheel(e)}
-	width={size}
-	height={size}
-></canvas>
+<div class="h-scren">
+	<canvas
+		bind:this={canvasElement}
+		class="m-auto h-11/12 p-4"
+		style="image-rendering: pixelated;"
+		onmousedown={(e) => {
+			previousX = e.clientX;
+			previousY = e.clientY;
+	
+			panning = true;
+		}}
+		onmousemove={(e) => {
+			if (panning) {
+				onMouseMove(e);
+			}
+		}}
+		onmouseup={() => (panning = false)}
+		onwheel={(e) => onMouseWheel(e)}
+		width={size}
+		height={size}
+	></canvas>
+</div>
