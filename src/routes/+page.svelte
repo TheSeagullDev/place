@@ -31,8 +31,28 @@
 	let ctx;
 	let imageData;
 
+	const randomArr = new Uint8ClampedArray(size * size * 4);
+
+	let count = 0;
+
+	for(let row = 0; row < size; row++) {
+			for(let col = 0; col < size; col++) {
+				for(let i = 0; i < 3; i++) {
+					const index = row * (size * 4) + col * 4 + i;
+					randomArr[index] = (Math.floor(Math.random() * 255)); 
+				}
+				randomArr[row * (size * 4) + col * 4 + 3] = 255;
+				count++;
+			}
+			if(count > 999900) {
+				console.log("almost done!");
+			}
+		}
+	console.log(count);
+
 	onMount(() => {
 		ctx = canvasElement.getContext('2d');
+		ctx.imageSmoothingEnabled = false;
 		render();
 	});
 
@@ -52,12 +72,10 @@
 		ctx.fillRect(x, y, 1, 1);
 	};
 
-	const paintScreen = (imageData) => {
+	const paintScreen = () => {
 		for(let row = 0; row < size; row++) {
 			for(let col = 0; col < size; col++) {
-				const indices = getIndicesForCoord(row, col, size);
-				const color = `rgb(${indices[0]} ${indices[1]} ${indices[2]}`;
-				drawPixel(row, col, color);
+				drawPixel(row, col, randomArr[row][col]);
 			}
 		} 
 	}
@@ -74,10 +92,14 @@
 			viewportTransform.y
 		);
 
-		drawRect(0, 0, 100, 100, 'red');
-		drawRect(200, 200, 100, 100, 'blue');
-		const imageData = ctx.getImageData(0, 0, size, size);
-		ctx.putImageData(imageData, 0, 0);
+		const imageData = new ImageData(randomArr, size, size);
+		let imageBitmap;
+
+		createImageBitmap(imageData).then(bitmap => {
+			imageBitmap = bitmap;
+			console.log(imageBitmap);
+			ctx.drawImage(imageBitmap, 0, 0);
+		});
 
 	};
 
@@ -106,7 +128,7 @@
 
 		const previousScale = viewportTransform.scale;
 
-		const newScale = (viewportTransform.scale += e.deltaY * -0.01);
+		const newScale = (viewportTransform.scale += e.deltaY * -0.002);
 
 		const newX = localX - (localX - oldX) * (newScale / previousScale);
 		const newY = localY - (localY - oldY) * (newScale / previousScale);
