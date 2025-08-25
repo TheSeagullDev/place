@@ -103,7 +103,7 @@
 			ctx.drawImage(imageBitmap, 0, 0);
 		});
 
-		console.log(`scale: ${viewportTransform.scale} x: ${viewportTransform.x} y: ${viewportTransform.y} scaled x ${viewportTransform.x / (viewportTransform.scale - 1)}`);
+		console.log(`scale: ${viewportTransform.scale} x: ${viewportTransform.x} y: ${viewportTransform.y}`);
 	};
 
 	let panning = false;
@@ -166,10 +166,11 @@
 
 	const pick = (event) => {
 		const bounding = canvasElement.getBoundingClientRect();
-		let x = event.clientX - bounding.left - canvasElement.width / 2;
-		let y = event.clientY - bounding.top - canvasElement.height / 2;
-		x = Math.floor(x / viewportTransform.scale - viewportTransform.x);
-		y = Math.floor(y / viewportTransform.scale - viewportTransform.y);
+		let x = event.clientX - bounding.left;
+		let y = event.clientY - bounding.top;
+		console.log(x);
+		x = Math.floor(Math.abs(viewportTransform.x) + (x / (viewportTransform.scale - 1)));
+		y = Math.floor(Math.abs(viewportTransform.x) + (y / (viewportTransform.scale - 1)));
 		return [x, y];
 	};
 
