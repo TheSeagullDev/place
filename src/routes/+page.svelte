@@ -39,7 +39,7 @@
 		for (let col = 0; col < size; col++) {
 			for (let i = 0; i < 3; i++) {
 				const index = row * (size * 4) + col * 4 + i;
-				randomArr[index] = Math.floor(Math.random() * 255);
+				randomArr[index] = Math.floor((row + col) / 2000 * 255 + Math.random() * 50);
 			}
 			randomArr[row * (size * 4) + col * 4 + 3] = 255;
 			count++;
@@ -59,8 +59,6 @@
 	const viewportTransform = {
 		x: 0,
 		y: 0,
-		scaledX: 0,
-		scaledY: 0,
 		scale: 1
 	};
 
@@ -85,7 +83,8 @@
 	const render = () => {
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
+		ctx.fillStyle = "#808080";
+		ctx.fillRect(0, 0, size, size);
 
 		ctx.setTransform(
 			viewportTransform.scale,
@@ -116,21 +115,7 @@
 		const localY = e.clientY;
 
 		viewportTransform.x += localX - previousX;
-		viewportTransform.scaledX = viewportTransform.x / (viewportTransform.scale - 1);
-		if(viewportTransform.scaledX < -1000) {
-			viewportTransform.x = -1000 * (viewportTransform.scale - 1);
-		}
-		else if(viewportTransform.x > 0) {
-			viewportTransform.x = 0;
-		}
 		viewportTransform.y += localY - previousY;
-		viewportTransform.scaledY = viewportTransform.y / (viewportTransform.scale - 1);
-		if(viewportTransform.scaledY < -1000) {
-			viewportTransform.y = -1000 * (viewportTransform.scale - 1);
-		}
-		else if(viewportTransform.y > 0) {
-			viewportTransform.y = 0;
-		}
 
 		previousX = localX;
 		previousY = localY;
@@ -160,22 +145,6 @@
 			viewportTransform.y = oldY;
 			viewportTransform.scale = 1;
 		}
-
-		viewportTransform.scaledX = viewportTransform.x / (viewportTransform.scale - 1);
-		if(viewportTransform.scaledX < -1000) {
-			viewportTransform.x = -1000 * (viewportTransform.scale - 1);
-		}
-		else if(viewportTransform.x > 0) {
-			viewportTransform.x = 0;
-		}
-		viewportTransform.y += localY - previousY;
-		viewportTransform.scaledY = viewportTransform.y / (viewportTransform.scale - 1);
-		if(viewportTransform.scaledY < -1000) {
-			viewportTransform.y = -1000 * (viewportTransform.scale - 1);
-		}
-		else if(viewportTransform.y > 0) {
-			viewportTransform.y = 0;
-		}
 		
 	};
 
@@ -197,10 +166,10 @@
 
 	const pick = (event) => {
 		const bounding = canvasElement.getBoundingClientRect();
-		let x = event.clientX - bounding.left;
-		let y = event.clientY - bounding.top;
-		x = Math.floor(x / scaleBy);
-		y = Math.floor(y / scaleBy);
+		let x = event.clientX - bounding.left - canvasElement.width / 2;
+		let y = event.clientY - bounding.top - canvasElement.height / 2;
+		x = Math.floor(x / viewportTransform.scale - viewportTransform.x);
+		y = Math.floor(y / viewportTransform.scale - viewportTransform.y);
 		return [x, y];
 	};
 
@@ -237,6 +206,9 @@
 		onmousemove={(e) => {
 			if (panning) {
 				onMouseMove(e);
+			}
+			else {
+				console.log(pick(e));
 			}
 		}}
 		onmouseup={() => (panning = false)}
