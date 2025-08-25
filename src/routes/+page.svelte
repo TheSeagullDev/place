@@ -33,22 +33,18 @@
 
 	const randomArr = new Uint8ClampedArray(size * size * 4);
 
-	let count = 0;
+	let hoveredCoords = [];
+	let prevHover = [];
 
 	for (let row = 0; row < size; row++) {
 		for (let col = 0; col < size; col++) {
 			for (let i = 0; i < 3; i++) {
 				const index = row * (size * 4) + col * 4 + i;
-				randomArr[index] = Math.floor((row + col) / 2000 * 255 + Math.random() * 50);
+				randomArr[index] = Math.floor(((row + col) / 2000) * 255 + Math.random() * 50);
 			}
 			randomArr[row * (size * 4) + col * 4 + 3] = 255;
-			count++;
-		}
-		if (count > 999900) {
-			console.log('almost done!');
 		}
 	}
-	console.log(count);
 
 	onMount(() => {
 		ctx = canvasElement.getContext('2d');
@@ -83,7 +79,7 @@
 	const render = () => {
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-		ctx.fillStyle = "#808080";
+		ctx.fillStyle = '#808080';
 		ctx.fillRect(0, 0, size, size);
 
 		ctx.setTransform(
@@ -102,8 +98,15 @@
 			imageBitmap = bitmap;
 			ctx.drawImage(imageBitmap, 0, 0);
 		});
+	};
 
-		console.log(`scale: ${viewportTransform.scale} x: ${viewportTransform.x} y: ${viewportTransform.y}`);
+	const renderHover = () => {
+		ctx.fillStyle = '#000000';
+		console.log(hoveredCoords);
+		ctx.fillRect(hoveredCoords[0], hoveredCoords[1], 1, 1);
+		if (hoveredCoords[0] !== prevHover[0] || hoveredCoords[1] !== prevHover[1]) {
+			render();
+		}
 	};
 
 	let panning = false;
@@ -145,7 +148,6 @@
 			viewportTransform.y = oldY;
 			viewportTransform.scale = 1;
 		}
-		
 	};
 
 	const onMouseWheel = (e) => {
@@ -168,9 +170,8 @@
 		const bounding = canvasElement.getBoundingClientRect();
 		let x = event.clientX - bounding.left;
 		let y = event.clientY - bounding.top;
-		console.log(x);
-		x = Math.floor(Math.abs(viewportTransform.x) + (x / (viewportTransform.scale - 1)));
-		y = Math.floor(Math.abs(viewportTransform.x) + (y / (viewportTransform.scale - 1)));
+		x = Math.floor((x - viewportTransform.x) / viewportTransform.scale);
+		y = Math.floor((y - viewportTransform.y) / viewportTransform.scale);
 		return [x, y];
 	};
 
@@ -196,20 +197,20 @@
 <div class="h-scren">
 	<canvas
 		bind:this={canvasElement}
-		class="m-auto h-11/12 p-4"
-		style="image-rendering: pixelated;"
+		class="m-auto h-11/12"
 		onmousedown={(e) => {
 			previousX = e.clientX;
 			previousY = e.clientY;
-	
+
 			panning = true;
 		}}
 		onmousemove={(e) => {
 			if (panning) {
 				onMouseMove(e);
-			}
-			else {
-				console.log(pick(e));
+			} else {
+				prevHover = hoveredCoords;
+				hoveredCoords = pick(e);
+				renderHover();
 			}
 		}}
 		onmouseup={() => (panning = false)}
