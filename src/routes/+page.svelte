@@ -28,10 +28,11 @@
 	let size = 1000;
 	let regenerate = false;
 	let canvasElement = $state();
+	let hoverOverlay = $state();
 	let ctx;
 	let imageData;
 
-	const randomArr = new Uint8ClampedArray(size * size * 4);
+	const imageArr = new Uint8ClampedArray(size * size * 4);
 
 	let hoveredCoords = [];
 	let prevHover = [];
@@ -40,9 +41,9 @@
 		for (let col = 0; col < size; col++) {
 			for (let i = 0; i < 3; i++) {
 				const index = row * (size * 4) + col * 4 + i;
-				randomArr[index] = Math.floor(((row + col) / 2000) * 255 + Math.random() * 50);
+				imageArr[index] = Math.floor(((row + col) / 2000) * 255 + Math.random() * 50);
 			}
-			randomArr[row * (size * 4) + col * 4 + 3] = 255;
+			imageArr[row * (size * 4) + col * 4 + 3] = 255;
 		}
 	}
 
@@ -71,7 +72,7 @@
 	const paintScreen = () => {
 		for (let row = 0; row < size; row++) {
 			for (let col = 0; col < size; col++) {
-				drawPixel(row, col, randomArr[row][col]);
+				drawPixel(row, col, imageArr[row][col]);
 			}
 		}
 	};
@@ -91,7 +92,7 @@
 			viewportTransform.y
 		);
 
-		const imageData = new ImageData(randomArr, size, size);
+		const imageData = new ImageData(imageArr, size, size);
 		let imageBitmap;
 
 		createImageBitmap(imageData).then((bitmap) => {
@@ -101,11 +102,14 @@
 	};
 
 	const renderHover = () => {
+		let prevColorIndicies = getIndicesForCoord(prevHover[0], prevHover[1], size);
+		let prevColor = `rgb(${imageArr[prevColorIndicies[0]]} ${imageArr[prevColorIndicies[1]]} ${imageArr[prevColorIndicies[2]]} / ${imageArr[prevColorIndicies[3]]})`;
 		ctx.fillStyle = '#000000';
-		console.log(hoveredCoords);
+		console.log(`hover: ${hoveredCoords} previous: ${prevHover} color: ${prevColorIndicies}`);
 		ctx.fillRect(hoveredCoords[0], hoveredCoords[1], 1, 1);
 		if (hoveredCoords[0] !== prevHover[0] || hoveredCoords[1] !== prevHover[1]) {
-			render();
+			ctx.fillStyle = prevColor;
+			ctx.fillRect(prevHover[0], prevHover[1], 1, 1);
 		}
 	};
 
@@ -197,7 +201,7 @@
 <div class="h-scren">
 	<canvas
 		bind:this={canvasElement}
-		class="m-auto h-11/12"
+		class=" h-11/12 "
 		onmousedown={(e) => {
 			previousX = e.clientX;
 			previousY = e.clientY;
@@ -218,4 +222,11 @@
 		width={size}
 		height={size}
 	></canvas>
+	<canvas
+		bind:this={hoverOverlay}
+		class="[pointer-events:none] absolute h-11/12"
+		width={size}
+		height={size}
+	>
+	</canvas>
 </div>
