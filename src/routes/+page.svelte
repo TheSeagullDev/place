@@ -30,6 +30,7 @@
 	let canvasElement = $state();
 	let hoverOverlay = $state();
 	let ctx;
+	let hoverCtx;
 	let imageData;
 
 	const imageArr = new Uint8ClampedArray(size * size * 4);
@@ -49,6 +50,7 @@
 
 	onMount(() => {
 		ctx = canvasElement.getContext('2d');
+		hoverCtx = hoverOverlay.getContext('2d');
 		ctx.imageSmoothingEnabled = false;
 		render();
 	});
@@ -102,15 +104,18 @@
 	};
 
 	const renderHover = () => {
-		let prevColorIndicies = getIndicesForCoord(prevHover[0], prevHover[1], size);
-		let prevColor = `rgb(${imageArr[prevColorIndicies[0]]} ${imageArr[prevColorIndicies[1]]} ${imageArr[prevColorIndicies[2]]} / ${imageArr[prevColorIndicies[3]]})`;
-		ctx.fillStyle = '#000000';
-		console.log(`hover: ${hoveredCoords} previous: ${prevHover} color: ${prevColorIndicies}`);
-		ctx.fillRect(hoveredCoords[0], hoveredCoords[1], 1, 1);
-		if (hoveredCoords[0] !== prevHover[0] || hoveredCoords[1] !== prevHover[1]) {
-			ctx.fillStyle = prevColor;
-			ctx.fillRect(prevHover[0], prevHover[1], 1, 1);
-		}
+		hoverCtx.setTransform(1, 0, 0, 1, 0, 0);
+		hoverCtx.clearRect(0, 0, hoverOverlay.width, hoverOverlay.height);
+		hoverCtx.setTransform(
+			viewportTransform.scale,
+			0,
+			0,
+			viewportTransform.scale,
+			viewportTransform.x,
+			viewportTransform.y
+		);
+		hoverCtx.fillStyle = '#000000';
+		hoverCtx.fillRect(hoveredCoords[0], hoveredCoords[1], 1, 1);
 	};
 
 	let panning = false;
@@ -172,8 +177,12 @@
 
 	const pick = (event) => {
 		const bounding = canvasElement.getBoundingClientRect();
-		let x = event.clientX - bounding.left;
-		let y = event.clientY - bounding.top;
+		console.log(bounding.left, bounding.top);
+		let screenScaleX = size / bounding.width;
+		let screenScaleY = size / bounding.height;
+		let x = (event.clientX - bounding.left) * screenScaleX;
+		let y = (event.clientY - bounding.top) * screenScaleY;
+		console.log(x, y);
 		x = Math.floor((x - viewportTransform.x) / viewportTransform.scale);
 		y = Math.floor((y - viewportTransform.y) / viewportTransform.scale);
 		return [x, y];
@@ -198,10 +207,10 @@
 	}}>Reset view</button
 >
 
-<div class="h-scren">
+<div class="fixed left-[12.5%] h-screen w-3/4">
 	<canvas
 		bind:this={canvasElement}
-		class=" h-11/12 "
+		class="absolute h-11/12"
 		onmousedown={(e) => {
 			previousX = e.clientX;
 			previousY = e.clientY;
@@ -211,6 +220,8 @@
 		onmousemove={(e) => {
 			if (panning) {
 				onMouseMove(e);
+				hoverCtx.setTransform(1, 0, 0, 1, 0, 0);
+				hoverCtx.clearRect(0, 0, hoverOverlay.width, hoverOverlay.height);
 			} else {
 				prevHover = hoveredCoords;
 				hoveredCoords = pick(e);
@@ -218,7 +229,11 @@
 			}
 		}}
 		onmouseup={() => (panning = false)}
-		onwheel={(e) => onMouseWheel(e)}
+		onwheel={(e) => {
+			hoverCtx.setTransform(1, 0, 0, 1, 0, 0);
+			hoverCtx.clearRect(0, 0, hoverOverlay.width, hoverOverlay.height);
+			onMouseWheel(e);
+		}}
 		width={size}
 		height={size}
 	></canvas>
