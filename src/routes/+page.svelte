@@ -25,6 +25,41 @@
 	const app = initializeApp(firebaseConfig);
 	const db = getFirestore(app);
 
+	const colors = [
+		'6d001a',
+		'be0039',
+		'ff4500',
+		'ffa800',
+		'ffd635',
+		'fff8b8',
+		'00a368',
+		'00cc78',
+		'7eed56',
+		'00756f',
+		'009eaa',
+		'00ccc0',
+		'2450a4',
+		'3690ea',
+		'51e9f4',
+		'493ac1',
+		'6a5cff',
+		'94b3ff',
+		'811e9f',
+		'b44ac0',
+		'e4abff',
+		'de107f',
+		'ff3881',
+		'ff99aa',
+		'6d482f',
+		'9c6926',
+		'ffb470',
+		'000000',
+		'515252',
+		'898d90',
+		'd4d7d9',
+		'ffffff'
+	];
+
 	let size = 1000;
 	let regenerate = false;
 	let canvasElement = $state();
@@ -40,10 +75,15 @@
 
 	for (let row = 0; row < size; row++) {
 		for (let col = 0; col < size; col++) {
-			for (let i = 0; i < 3; i++) {
-				const index = row * (size * 4) + col * 4 + i;
-				imageArr[index] = Math.floor(((row + col) / 2000) * 255 + Math.random() * 50);
-			}
+			const color = colors[Math.floor(Math.random() * colors.length)];
+			const r = parseInt(color.slice(0, 2), 16);
+			const g = parseInt(color.slice(2, 4), 16);
+			const b = parseInt(color.slice(4, 6), 16);
+			const index = row * (size * 4) + col * 4;
+			imageArr[index] = r;
+			imageArr[index + 1] = g;
+			imageArr[index + 2] = b;
+
 			imageArr[row * (size * 4) + col * 4 + 3] = 255;
 		}
 	}
@@ -104,6 +144,7 @@
 	};
 
 	const renderHover = () => {
+		const thickness = 0.2;
 		hoverCtx.setTransform(1, 0, 0, 1, 0, 0);
 		hoverCtx.clearRect(0, 0, hoverOverlay.width, hoverOverlay.height);
 		hoverCtx.setTransform(
@@ -114,8 +155,40 @@
 			viewportTransform.x,
 			viewportTransform.y
 		);
-		hoverCtx.fillStyle = '#000000';
+		const coords = getIndicesForCoord(hoveredCoords[0], hoveredCoords[1], size);
+		const r = imageArr[coords[0]].toString(16).padStart(2, '0');
+		const g = imageArr[coords[1]].toString(16).padStart(2, '0');
+		const b = imageArr[coords[2]].toString(16).padStart(2, '0');
+
+		const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+		const color = `#${r}${g}${b}`;
+		if (luma < 40) {
+			hoverCtx.fillStyle = '#FFFFFF';
+		} else {
+			hoverCtx.fillStyle = '#000000';
+		}
+
 		hoverCtx.fillRect(hoveredCoords[0], hoveredCoords[1], 1, 1);
+		hoverCtx.fillStyle = color;
+		hoverCtx.fillRect(
+			hoveredCoords[0] + thickness / 2,
+			hoveredCoords[1] + thickness / 2,
+			1 - thickness,
+			1 - thickness
+		);
+	};
+
+	const clearHover = () => {
+		hoverCtx.setTransform(1, 0, 0, 1, 0, 0);
+		hoverCtx.clearRect(0, 0, hoverOverlay.width, hoverOverlay.height);
+		hoverCtx.setTransform(
+			viewportTransform.scale,
+			0,
+			0,
+			viewportTransform.scale,
+			viewportTransform.x,
+			viewportTransform.y
+		);
 	};
 
 	let panning = false;
@@ -177,12 +250,10 @@
 
 	const pick = (event) => {
 		const bounding = canvasElement.getBoundingClientRect();
-		console.log(bounding.left, bounding.top);
 		let screenScaleX = size / bounding.width;
 		let screenScaleY = size / bounding.height;
 		let x = (event.clientX - bounding.left) * screenScaleX;
 		let y = (event.clientY - bounding.top) * screenScaleY;
-		console.log(x, y);
 		x = Math.floor((x - viewportTransform.x) / viewportTransform.scale);
 		y = Math.floor((y - viewportTransform.y) / viewportTransform.scale);
 		return [x, y];
@@ -225,7 +296,16 @@
 			} else {
 				prevHover = hoveredCoords;
 				hoveredCoords = pick(e);
-				renderHover();
+				if (
+					hoveredCoords[0] >= 0 &&
+					hoveredCoords[0] < 1000 &&
+					hoveredCoords[1] >= 0 &&
+					hoveredCoords[1] < 1000
+				) {
+					renderHover();
+				} else {
+					clearHover();
+				}
 			}
 		}}
 		onmouseup={() => (panning = false)}
