@@ -268,60 +268,68 @@
 	}
 </script>
 
-<button
-	class="fixed"
-	onclick={() => {
-		viewportTransform.x = 0;
-		viewportTransform.y = 0;
-		viewportTransform.scale = 1;
-		render();
-	}}>Reset view</button
->
-
-<div class="fixed left-[12.5%] h-screen w-3/4">
-	<canvas
-		bind:this={canvasElement}
-		class="absolute h-11/12"
-		onmousedown={(e) => {
-			previousX = e.clientX;
-			previousY = e.clientY;
-
-			panning = true;
-		}}
-		onmousemove={(e) => {
-			if (panning) {
-				onMouseMove(e);
+<div class="h-screen flex flex-col items-center">
+	<button
+		class=""
+		onclick={() => {
+			viewportTransform.x = 0;
+			viewportTransform.y = 0;
+			viewportTransform.scale = 1;
+			render();
+		}}>Reset view</button
+	>
+	
+	<div class="relative w-full flex-1">
+		<canvas
+			bind:this={canvasElement}
+			class="absolute"
+			onmousedown={(e) => {
+				previousX = e.clientX;
+				previousY = e.clientY;
+	
+				panning = true;
+			}}
+			onmousemove={(e) => {
+				if (panning) {
+					onMouseMove(e);
+					hoverCtx.setTransform(1, 0, 0, 1, 0, 0);
+					hoverCtx.clearRect(0, 0, hoverOverlay.width, hoverOverlay.height);
+				} else {
+					prevHover = hoveredCoords;
+					hoveredCoords = pick(e);
+					if (
+						hoveredCoords[0] >= 0 &&
+						hoveredCoords[0] < 1000 &&
+						hoveredCoords[1] >= 0 &&
+						hoveredCoords[1] < 1000
+					) {
+						renderHover();
+					} else {
+						clearHover();
+					}
+				}
+			}}
+			onmouseup={() => (panning = false)}
+			onwheel={(e) => {
 				hoverCtx.setTransform(1, 0, 0, 1, 0, 0);
 				hoverCtx.clearRect(0, 0, hoverOverlay.width, hoverOverlay.height);
-			} else {
-				prevHover = hoveredCoords;
-				hoveredCoords = pick(e);
-				if (
-					hoveredCoords[0] >= 0 &&
-					hoveredCoords[0] < 1000 &&
-					hoveredCoords[1] >= 0 &&
-					hoveredCoords[1] < 1000
-				) {
-					renderHover();
-				} else {
-					clearHover();
-				}
-			}
-		}}
-		onmouseup={() => (panning = false)}
-		onwheel={(e) => {
-			hoverCtx.setTransform(1, 0, 0, 1, 0, 0);
-			hoverCtx.clearRect(0, 0, hoverOverlay.width, hoverOverlay.height);
-			onMouseWheel(e);
-		}}
-		width={size}
-		height={size}
-	></canvas>
-	<canvas
-		bind:this={hoverOverlay}
-		class="[pointer-events:none] absolute h-11/12"
-		width={size}
-		height={size}
-	>
-	</canvas>
+				onMouseWheel(e);
+			}}
+			width={size}
+			height={size}
+		></canvas>
+		<canvas
+			bind:this={hoverOverlay}
+			class="[pointer-events:none] absolute"
+			width={size}
+			height={size}
+		>
+		</canvas>
+	</div>
+
+	<div class="grid grid-cols-8 gap-1 w-content p-4">
+		{#each colors as color}
+			<div class="size-8 border-2 rounded-md hover:scale-110 transition-all" style="background-color: #{color};"></div>
+		{/each}
+	</div>
 </div>
