@@ -9,9 +9,7 @@
 		query,
 		orderBy,
 		onSnapshot,
-
 		arrayRemove
-
 	} from 'firebase/firestore';
 	import { initializeApp } from 'firebase/app';
 	import { onMount } from 'svelte';
