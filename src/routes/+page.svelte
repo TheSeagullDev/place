@@ -9,7 +9,8 @@
 		query,
 		orderBy,
 		onSnapshot,
-		arrayRemove
+		arrayRemove,
+		getDocs
 	} from 'firebase/firestore';
 	import { initializeApp } from 'firebase/app';
 	import { onMount } from 'svelte';
@@ -107,6 +108,7 @@
 		ctx = canvasElement.getContext('2d');
 		hoverCtx = hoverOverlay.getContext('2d');
 		ctx.imageSmoothingEnabled = false;
+		loadData();
 		render();
 	});
 
@@ -298,11 +300,35 @@
 	};
 
 	async function sendData(y) {
-		setDoc(doc(db, 'rows', `row${y}`), {
+		setDoc(doc(db, 'rows', `${y}`), {
 			row: y,
 			rowData: encodeRow(y, size),
 			timestamp: Date.now()
 		});
+	}
+
+	async function loadData() {
+		const querySnapshot = await getDocs(collection(db, 'rows'));
+		querySnapshot.forEach((doc) => {
+			setRow(doc.id, doc.data().rowData);
+		});
+
+		const q = query(collection(db, 'rows'));
+		onSnapshot(q, (snaps) => {
+			snaps.forEach((doc) => {
+				setRow(doc.id, doc.data().rowData);
+			});
+		});
+
+		render();
+	}
+
+	function setRow(row, rowData) {
+		rowData.forEach((pixel, index) => {
+			const hex = colors[pixel];
+			setPixelFromHex(hex, getIndicesForCoord(index, row, size));
+		});
+		render();
 	}
 </script>
 
