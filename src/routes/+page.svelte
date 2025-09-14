@@ -8,7 +8,10 @@
 		addDoc,
 		query,
 		orderBy,
-		onSnapshot
+		onSnapshot,
+
+		arrayRemove
+
 	} from 'firebase/firestore';
 	import { initializeApp } from 'firebase/app';
 	import { onMount } from 'svelte';
@@ -67,24 +70,38 @@
 	let ctx;
 	let hoverCtx;
 	let imageData;
+	let selectedColor = $state(0);
+	let isPlacing = $state(false);
 
 	const imageArr = new Uint8ClampedArray(size * size * 4);
 
 	let hoveredCoords = [];
 	let prevHover = [];
 
+	const generateRandomData = () => {
+		for (let row = 0; row < size; row++) {
+			for (let col = 0; col < size; col++) {
+				const color = colors[Math.floor(Math.random() * colors.length)];
+				const r = parseInt(color.slice(0, 2), 16);
+				const g = parseInt(color.slice(2, 4), 16);
+				const b = parseInt(color.slice(4, 6), 16);
+				const index = row * (size * 4) + col * 4;
+				imageArr[index] = r;
+				imageArr[index + 1] = g;
+				imageArr[index + 2] = b;
+
+				imageArr[index + 3] = 255;
+			}
+		}
+	};
+
 	for (let row = 0; row < size; row++) {
 		for (let col = 0; col < size; col++) {
-			const color = colors[Math.floor(Math.random() * colors.length)];
-			const r = parseInt(color.slice(0, 2), 16);
-			const g = parseInt(color.slice(2, 4), 16);
-			const b = parseInt(color.slice(4, 6), 16);
 			const index = row * (size * 4) + col * 4;
-			imageArr[index] = r;
-			imageArr[index + 1] = g;
-			imageArr[index + 2] = b;
-
-			imageArr[row * (size * 4) + col * 4 + 3] = 255;
+			imageArr[index] = 255;
+			imageArr[index + 1] = 255;
+			imageArr[index + 2] = 255;
+			imageArr[index + 3] = 255;
 		}
 	}
 
@@ -94,6 +111,29 @@
 		ctx.imageSmoothingEnabled = false;
 		render();
 	});
+
+	function setPixelFromHex(color, indices) {
+		const r = parseInt(color.slice(0, 2), 16);
+		const g = parseInt(color.slice(2, 4), 16);
+		const b = parseInt(color.slice(4, 6), 16);
+		imageArr[indices[0]] = r;
+		imageArr[indices[1]] = g;
+		imageArr[indices[2]] = b;
+	}
+
+	const encodeRow = (row, size) => {
+		const encodedArr = [];
+		for (let col = 0; col < size; col++) {
+			const coords = getIndicesForCoord(col, row, size);
+			const r = imageArr[coords[0]].toString(16).padStart(2, '0');
+			const g = imageArr[coords[1]].toString(16).padStart(2, '0');
+			const b = imageArr[coords[2]].toString(16).padStart(2, '0');
+			const hex = `${r}${g}${b}`;
+			const color = colors.indexOf(hex);
+			encodedArr.push(color);
+		}
+		return encodedArr;
+	};
 
 	const viewportTransform = {
 		x: 0,
@@ -260,15 +300,15 @@
 	};
 
 	async function sendData(y) {
-		setDoc(doc(db, 'data', `row${y}`), {
+		setDoc(doc(db, 'rows', `row${y}`), {
 			row: y,
-			rowData: pixels[y],
+			rowData: encodeRow(y, size),
 			timestamp: Date.now()
 		});
 	}
 </script>
 
-<div class="h-screen flex flex-col items-center">
+<div class="flex h-screen flex-col items-center">
 	<button
 		class=""
 		onclick={() => {
@@ -278,16 +318,26 @@
 			render();
 		}}>Reset view</button
 	>
-	
+
 	<div class="relative w-full flex-1">
 		<canvas
 			bind:this={canvasElement}
 			class="absolute"
 			onmousedown={(e) => {
-				previousX = e.clientX;
-				previousY = e.clientY;
-	
-				panning = true;
+				if (isPlacing) {
+					const coords = pick(e);
+					const indices = getIndicesForCoord(coords[0], coords[1], size);
+					const color = colors[selectedColor];
+					setPixelFromHex(color, indices);
+					render();
+					renderHover();
+					sendData(coords[1]);
+				} else {
+					previousX = e.clientX;
+					previousY = e.clientY;
+
+					panning = true;
+				}
 			}}
 			onmousemove={(e) => {
 				if (panning) {
@@ -327,9 +377,25 @@
 		</canvas>
 	</div>
 
-	<div class="grid grid-cols-8 gap-1 w-content p-4">
-		{#each colors as color}
-			<div class="size-8 border-2 rounded-md hover:scale-110 transition-all" style="background-color: #{color};"></div>
-		{/each}
-	</div>
+	{#if !isPlacing}
+		<button onclick={() => (isPlacing = true)}>Place a Pixel</button>
+	{:else}
+		<div class="flex items-center">
+			<div class="w-content grid grid-cols-8 gap-1 p-4">
+				{#each colors as color, index}
+					<!-- svelte-ignore a11y_consider_explicit_label -->
+					<button
+						class="size-8 rounded-md border-2 transition-all hover:scale-110"
+						style="background-color: #{color};"
+						onclick={() => (selectedColor = index)}
+					></button>
+				{/each}
+			</div>
+			<div
+				class="size-32 rounded-md border-2"
+				style="background-color: #{colors[selectedColor]};"
+			></div>
+		</div>
+		<button onclick={() => (isPlacing = false)}>Cancel</button>
+	{/if}
 </div>
