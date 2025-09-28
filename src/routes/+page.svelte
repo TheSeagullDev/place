@@ -377,7 +377,7 @@
 {/if}
 <div class="h-screen flex-col items-center" style="display: {loading ? 'none' : 'flex'};">
 	<button
-		class=""
+		class="p-4 rounded-md bg-blue-200 m-4"
 		onclick={() => {
 			viewportTransform.x = 0;
 			viewportTransform.y = 0;
@@ -469,7 +469,7 @@
 			</form>
 		</div> -->
 	{#if !isPlacing}
-		<button onclick={() => (isPlacing = true)}>Place a Pixel</button>
+		<button onclick={() => (isPlacing = true)} class="p-4 rounded-md bg-blue-200 m-4">Place a Pixel</button>
 	{:else}
 		<div class="flex items-center">
 			<div class="w-content grid grid-cols-8 gap-1 p-4">
@@ -487,6 +487,6 @@
 				style="background-color: #{colors[selectedColor]};"
 			></div>
 		</div>
-		<button onclick={() => (isPlacing = false)}>Cancel</button>
+		<button onclick={() => (isPlacing = false)} class="p-4 rounded-md bg-blue-200 m-4">Cancel</button>
 	{/if}
 </div>
