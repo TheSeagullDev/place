@@ -11,12 +11,12 @@
 		onSnapshot,
 		arrayRemove,
 		getDocs,
+		updateDoc
 	} from 'firebase/firestore';
 	import { initializeApp } from 'firebase/app';
 	import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 	import { onMount } from 'svelte';
 	import { EmailAuthCredential } from 'firebase/auth/web-extension';
-	import { preventDefault } from 'svelte/legacy';
 
 	const firebaseConfig = {
 		apiKey: 'AIzaSyAnPWKF42Qz68nxsm1y-l58JPOrIgjMF94',
@@ -67,6 +67,7 @@
 	];
 
 	let size = 1000;
+	const chunkSize = 20;
 	let regenerate = false;
 	let canvasElement = $state();
 	let hoverOverlay = $state();
@@ -77,6 +78,8 @@
 	let isPlacing = $state(false);
 	let cooldown = false;
 	const forceLoad = false;
+	let loading = $state(true);
+	let currentProgress = $state(0);
 
 	const imageArr = new Uint8ClampedArray(size * size * 4);
 
@@ -306,28 +309,41 @@
 	};
 
 	async function sendData(y) {
-		setDoc(doc(db, 'rows', `${y}`), {
-			row: y,
-			rowData: encodeRow(y, size),
-			timestamp: Date.now()
+		let chunkIndex = Math.floor(y / chunkSize);
+		let localChunkIndex = y % chunkSize;
+		const chunk = doc(db, "chunks", `${chunkIndex}`);
+		const encodedRow = encodeRow(y, size);
+		await updateDoc(chunk, {
+			[`row${localChunkIndex}`]: encodedRow
 		});
 	}
 
 	async function loadData() {
-		const querySnapshot = await getDocs(collection(db, 'rows'));
-		querySnapshot.forEach((doc) => {
-			setRow(doc.id, doc.data().rowData);
-		});
+		const querySnapshot = await getDocs(collection(db, 'chunks'));
+		for (const doc of querySnapshot.docs) {
+			for (let i = 0; i < chunkSize; i++) {
+				const row = doc.data()[`row${i}`];
+				currentProgress += 1;
+				console.log(currentProgress);
+				setRow(doc.id * chunkSize + i, row);
 
-		const q = query(collection(db, 'rows'));
+				await new Promise((r) => setTimeout(r, 0));
+			}
+		}
+
+		const q = query(collection(db, 'chunks'));
 		onSnapshot(q, (snaps) => {
 			snaps.docChanges().forEach((change) => {
-				if(change.type == "modified") {
-				setRow(change.doc.id, change.doc.data().rowData);
+				if (change.type == 'modified') {
+					for (let i = 0; i < chunkSize; i++) {
+						const row = change.doc.data()[`row${i}`];
+						setRow(change.doc.id * chunkSize + i, row);
+					}
 				}
 			});
 		});
 
+		loading = false;
 		render();
 	}
 
@@ -339,14 +355,27 @@
 		render();
 	}
 
-	if(forceLoad) {
-		for(let i = 0; i < size; i++) {
+	if (forceLoad) {
+		for (let i = 0; i < size; i += 20) {
 			sendData(i);
 		}
 	}
 </script>
 
-<div class="flex h-screen flex-col items-center">
+{#if loading}
+	<div class="h-screen flex items-center justify-center">
+		<div class="w-1/2 h-1/2">
+			<h1 class="text-3xl p-4">Loading...</h1>
+			<div class="h-4 w-full rounded-full bg-gray-200">
+				<div
+					class="h-4 rounded-full bg-blue-600"
+					style="width: {(currentProgress / size) * 100}%"
+				></div>
+			</div>
+		</div>
+	</div>
+{/if}
+<div class="h-screen flex-col items-center" style="display: {loading ? 'none' : 'flex'};">
 	<button
 		class=""
 		onclick={() => {
@@ -360,19 +389,19 @@
 	<div class="relative w-full flex-1">
 		<canvas
 			bind:this={canvasElement}
-			class="absolute"
+			class="absolute left-1/2 w-[40vw] -translate-x-1/2 border-2"
 			onmousedown={(e) => {
 				if (isPlacing) {
-					if(!cooldown) {
-					const coords = pick(e);
-					const indices = getIndicesForCoord(coords[0], coords[1], size);
-					const color = colors[selectedColor];
-					setPixelFromHex(color, indices);
-					render();
-					renderHover();
-					sendData(coords[1]);
-					cooldown = true;
-					setTimeout((() => cooldown = false), 500);
+					if (!cooldown) {
+						const coords = pick(e);
+						const indices = getIndicesForCoord(coords[0], coords[1], size);
+						const color = colors[selectedColor];
+						setPixelFromHex(color, indices);
+						render();
+						renderHover();
+						sendData(coords[1]);
+						cooldown = true;
+						setTimeout(() => (cooldown = false), 500);
 					}
 				} else {
 					previousX = e.clientX;
@@ -412,33 +441,33 @@
 		></canvas>
 		<canvas
 			bind:this={hoverOverlay}
-			class="[pointer-events:none] absolute"
+			class="[pointer-events:none] absolute left-1/2 w-[40vw] -translate-x-1/2 border-2"
 			width={size}
 			height={size}
 		>
 		</canvas>
 	</div>
 	<!-- <div>
-		Sign Up
-		<form onsubmit={(e) => {
-			e.preventDefault();
-			createUserWithEmailAndPassword(auth, userEmail, userPass)
-			.then((userCredential) => {
-				const user = userCredential.user;
-			})
-			.catch((error) => {
-				const errorCode = error.code;
-				const errorMessage = error.message;
-				alert(`Error code: ${errorCode} \n ${errorMessage}`);
-			});
-			userEmail = '';
-			userPass = '';
-		}}>
-			<input type="email" name="email" id="email" bind:value={userEmail} placeholder="Email">
-			<input type="password" name="password" id="password" bind:value={userPass} placeholder="Password">
-			<input type="submit">
-		</form>
-	</div> -->
+			Sign Up
+			<form onsubmit={(e) => {
+				e.preventDefault();
+				createUserWithEmailAndPassword(auth, userEmail, userPass)
+				.then((userCredential) => {
+					const user = userCredential.user;
+				})
+				.catch((error) => {
+					const errorCode = error.code;
+					const errorMessage = error.message;
+					alert(`Error code: ${errorCode} \n ${errorMessage}`);
+				});
+				userEmail = '';
+				userPass = '';
+			}}>
+				<input type="email" name="email" id="email" bind:value={userEmail} placeholder="Email">
+				<input type="password" name="password" id="password" bind:value={userPass} placeholder="Password">
+				<input type="submit">
+			</form>
+		</div> -->
 	{#if !isPlacing}
 		<button onclick={() => (isPlacing = true)}>Place a Pixel</button>
 	{:else}
