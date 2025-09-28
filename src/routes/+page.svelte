@@ -10,10 +10,13 @@
 		orderBy,
 		onSnapshot,
 		arrayRemove,
-		getDocs
+		getDocs,
 	} from 'firebase/firestore';
 	import { initializeApp } from 'firebase/app';
+	import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 	import { onMount } from 'svelte';
+	import { EmailAuthCredential } from 'firebase/auth/web-extension';
+	import { preventDefault } from 'svelte/legacy';
 
 	const firebaseConfig = {
 		apiKey: 'AIzaSyAnPWKF42Qz68nxsm1y-l58JPOrIgjMF94',
@@ -26,6 +29,7 @@
 
 	const app = initializeApp(firebaseConfig);
 	const db = getFirestore(app);
+	const auth = getAuth();
 
 	const colors = [
 		'6d001a',
@@ -71,6 +75,8 @@
 	let imageData;
 	let selectedColor = $state(0);
 	let isPlacing = $state(false);
+	let cooldown = false;
+	const forceLoad = false;
 
 	const imageArr = new Uint8ClampedArray(size * size * 4);
 
@@ -315,8 +321,10 @@
 
 		const q = query(collection(db, 'rows'));
 		onSnapshot(q, (snaps) => {
-			snaps.forEach((doc) => {
-				setRow(doc.id, doc.data().rowData);
+			snaps.docChanges().forEach((change) => {
+				if(change.type == "modified") {
+				setRow(change.doc.id, change.doc.data().rowData);
+				}
 			});
 		});
 
@@ -329,6 +337,12 @@
 			setPixelFromHex(hex, getIndicesForCoord(index, row, size));
 		});
 		render();
+	}
+
+	if(forceLoad) {
+		for(let i = 0; i < size; i++) {
+			sendData(i);
+		}
 	}
 </script>
 
@@ -349,6 +363,7 @@
 			class="absolute"
 			onmousedown={(e) => {
 				if (isPlacing) {
+					if(!cooldown) {
 					const coords = pick(e);
 					const indices = getIndicesForCoord(coords[0], coords[1], size);
 					const color = colors[selectedColor];
@@ -356,6 +371,9 @@
 					render();
 					renderHover();
 					sendData(coords[1]);
+					cooldown = true;
+					setTimeout((() => cooldown = false), 500);
+					}
 				} else {
 					previousX = e.clientX;
 					previousY = e.clientY;
@@ -400,7 +418,27 @@
 		>
 		</canvas>
 	</div>
-
+	<!-- <div>
+		Sign Up
+		<form onsubmit={(e) => {
+			e.preventDefault();
+			createUserWithEmailAndPassword(auth, userEmail, userPass)
+			.then((userCredential) => {
+				const user = userCredential.user;
+			})
+			.catch((error) => {
+				const errorCode = error.code;
+				const errorMessage = error.message;
+				alert(`Error code: ${errorCode} \n ${errorMessage}`);
+			});
+			userEmail = '';
+			userPass = '';
+		}}>
+			<input type="email" name="email" id="email" bind:value={userEmail} placeholder="Email">
+			<input type="password" name="password" id="password" bind:value={userPass} placeholder="Password">
+			<input type="submit">
+		</form>
+	</div> -->
 	{#if !isPlacing}
 		<button onclick={() => (isPlacing = true)}>Place a Pixel</button>
 	{:else}
