@@ -389,7 +389,7 @@
 	<div class="relative w-full flex-1">
 		<canvas
 			bind:this={canvasElement}
-			class="absolute left-1/2 w-[40vw] -translate-x-1/2 border-2"
+			class="absolute left-1/2 w-[60vh] -translate-x-1/2 border-2"
 			onmousedown={(e) => {
 				if (isPlacing) {
 					if (!cooldown) {
@@ -441,7 +441,7 @@
 		></canvas>
 		<canvas
 			bind:this={hoverOverlay}
-			class="[pointer-events:none] absolute left-1/2 w-[40vw] -translate-x-1/2 border-2"
+			class="[pointer-events:none] absolute left-1/2 w-[60vh] -translate-x-1/2 border-2"
 			width={size}
 			height={size}
 		>
