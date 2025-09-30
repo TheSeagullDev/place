@@ -80,7 +80,7 @@
 	const forceLoad = false;
 	let loading = $state(true);
 	let currentProgress = $state(0);
-	let cooldownTime = 5000;
+	let cooldownTime = 500;
 
 	const imageArr = new Uint8ClampedArray(size * size * 4);
 
@@ -403,9 +403,6 @@
 						sendData(coords[1]);
 						cooldown = true;
 						setTimeout(() => (cooldown = false), cooldownTime);
-					}
-					else {
-						alert(`Still on ${cooldownTime / 1000}s cooldown!`);
 					}
 				} else {
 					previousX = e.clientX;
