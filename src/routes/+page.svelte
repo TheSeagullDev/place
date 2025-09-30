@@ -476,17 +476,17 @@
 				{#each colors as color, index}
 					<!-- svelte-ignore a11y_consider_explicit_label -->
 					<button
-						class="size-8 rounded-md border-2 transition-all hover:scale-110"
+						class="size-[2vh] lg:size-[3vh] rounded-md border-2 transition-all hover:scale-110"
 						style="background-color: #{color};"
 						onclick={() => (selectedColor = index)}
 					></button>
 				{/each}
 			</div>
 			<div
-				class="size-32 rounded-md border-2"
+				class="size-[8vh] lg:size-[12vh] rounded-md border-2"
 				style="background-color: #{colors[selectedColor]};"
 			></div>
 		</div>
-		<button onclick={() => (isPlacing = false)} class="p-4 rounded-md bg-blue-200 m-4">Cancel</button>
+		<button onclick={() => (isPlacing = false)} class="m-2 p-4 rounded-md bg-blue-200 lg:m-4">Cancel</button>
 	{/if}
 </div>
