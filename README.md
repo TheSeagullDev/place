@@ -8,6 +8,7 @@ This is a pretty basic clone of the popular reddit experiment, r/place, that let
 - 32 different colors!
 - Each user can place 1 pixel every half second. This value was kinda arbitrarily selected
 - It updates in livetime! No refreshing needed. The latency appears to be pretty good
+- Firebase/firestore backend
 
 # Current limitations
 
